@@ -1,14 +1,23 @@
-# برنامج الخطوات · نسخة العرض (GitHub Pages)
+# برنامج الخطوات · Step by Step
 
-- `index.html`: صفحة العميل (يشوف خطواته فقط)
-- `cashier.html`: صفحة الكاشير (رمز العرض 1234)
+نظام ولاء للكوفي: كل طلب خطوة، وبعد ٥ خطوات الكوب السادس مجاني.
+
+المستودع فيه نسختين:
+
+| النسخة | المكان | وش هي |
+|---|---|---|
+| نسخة العرض | جذر المستودع (`index.html`, `cashier.html`) | للعرض على أصحاب الكوفيات. تشتغل على GitHub Pages بدون قاعدة بيانات |
+| النظام الحقيقي | مجلد [`server/`](server/) | PHP + MySQL مع طبقات الحماية. يحتاج استضافة تدعم PHP |
+
+## نسخة العرض
+- العميل: https://abdallah3d.github.io/stepbystep/
+- الكاشير: https://abdallah3d.github.io/stepbystep/cashier.html (رمز العرض 1234)
 
 البيانات تنحفظ في متصفح الجهاز فقط، فاعرض الصفحتين من نفس الجوال.
-للتشغيل الحقيقي استخدم نسخة PHP و MySQL.
+الرمز مكتوب في الكود، فلا تستخدم نسخة العرض مع عملاء حقيقيين.
 
-## الرفع
-1. أنشئ مستودع جديد عام (Public) باسم `stepbystep`.
-2. ارفع الملفات كلها (Add file ← Upload files).
-3. Settings ← Pages ← Branch: main ← Save.
-4. بعد دقيقة يصير الرابط: `https://اسمك.github.io/stepbystep/`
-   والكاشير: `https://اسمك.github.io/stepbystep/cashier.html`
+## النظام الحقيقي
+GitHub Pages ما يشغّل PHP، فالمجلد `server/` ينرفع على استضافة (مثل Hostinger أو InfinityFree).
+خطوات التركيب وقائمة الحماية في [`server/README.md`](server/README.md).
+
+ملف `server/app/config.php` (فيه كلمة مرور قاعدة البيانات) ما ينرفع على GitHub أبدًا، والمستودع فيه `config.example.php` بس.

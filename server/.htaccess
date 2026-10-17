@@ -1,0 +1,15 @@
+# ملفات ما لازم تنفتح من المتصفح: قاعدة البيانات، التوثيق، والملفات المخفية
+<FilesMatch "(\.(sql|md|log|bak|ini|env|zip)$|^\.)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# إذا انرفع الموقع من GitHub، مجلد .git يكون موجود ولازم ما ينفتح (فيه نسخة كاملة من الكود)
+<IfModule mod_alias.c>
+  RedirectMatch 404 /\.git(/|$)
+</IfModule>

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Quicksand:wght@500;700&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -24,15 +24,18 @@
     <form id="f">
       <label for="phone">رقم جوالك</label>
       <div class="row">
-        <input id="phone" inputmode="numeric" placeholder="05xxxxxxxx" autocomplete="tel">
+        <input id="phone" inputmode="numeric" placeholder="05xxxxxxxx" autocomplete="tel" enterkeyhint="search">
         <button class="btn" type="submit">اعرض بطاقتي</button>
       </div>
       <p id="err" class="err" hidden></p>
     </form>
 
-    <p id="none" class="status" hidden>ما عندك خطوات للحين. قل رقمك للكاشير مع طلبك القادم.</p>
+    <div id="none" class="none" hidden>
+      <p class="status">ما عندك خطوات للحين. قل رقمك للكاشير مع طلبك القادم.</p>
+      <p class="sub center">نسخة العرض تحفظ البيانات في هذا الجوال فقط، فافتح صفحة الكاشير من نفس الجوال ونفس المتصفح.</p>
+    </div>
 
-    <div id="card" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div id="card" class="result" hidden>
       <div class="steps" id="steps"></div>
       <p class="status" id="status"></p>
       <div class="stats">
@@ -45,24 +48,53 @@
   <p class="note">نسخة عرض تجريبية · جرّب الرقم 0551234567</p>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=2"></script>
 <script>
   const $ = id => document.getElementById(id);
-  function show(raw) {
-    const p = SBS.norm(raw);
-    $("err").hidden = true; $("none").hidden = true; $("card").hidden = true;
-    if (!p) { $("err").textContent = "اكتب رقم جوالك كامل، يبدأ بـ 05 ومن عشرة أرقام."; $("err").hidden = false; return; }
+  let shown = null;   // الرقم المعروض حاليًا
+
+  // يقرأ أحدث البيانات ويرسم البطاقة، ويرجّع العنصر اللي ظهر
+  function render(p) {
+    shown = p;
     const c = SBS.load().customers[p];
-    if (!c) { $("none").hidden = false; return; }
+    $("err").hidden = true;
+    $("none").hidden = !!c;
+    $("card").hidden = !c;
+    if (!c) return $("none");
     SBS.renderSteps($("steps"), c.steps);
     $("status").textContent = SBS.statusText(c.steps);
     $("free").textContent = SBS.ar(c.free);
     $("total").textContent = SBS.ar(c.total);
-    $("card").hidden = false;
+    return $("card");
   }
-  $("f").addEventListener("submit", e => { e.preventDefault(); show($("phone").value); });
-  // يحدّث البطاقة إذا الكاشير أضاف خطوة من تبويب ثاني على نفس الجهاز
-  window.addEventListener("storage", () => { if (!$("card").hidden || !$("none").hidden) show($("phone").value); });
+
+  function lookup(raw, byUser) {
+    const p = SBS.norm(raw);
+    if (!p) {
+      shown = null;
+      $("none").hidden = true; $("card").hidden = true;
+      $("err").textContent = "اكتب رقم جوالك كامل، يبدأ بـ 05 ومن عشرة أرقام.";
+      $("err").hidden = false;
+      return;
+    }
+    $("phone").value = p;
+    SBS.remember(p);
+    const target = render(p);
+    if (byUser) SBS.reveal($("phone"), target);
+  }
+
+  $("f").addEventListener("submit", e => { e.preventDefault(); lookup($("phone").value, true); });
+
+  // كل ما رجعت الصفحة للواجهة تقرأ البيانات من جديد، عشان تظهر الخطوة اللي أضافها الكاشير
+  const refresh = () => { if (shown) render(shown); };
+  window.addEventListener("storage", refresh);
+  window.addEventListener("pageshow", refresh);
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+
+  // تفتح البطاقة مباشرة: من رابط الكاشير، أو آخر رقم استُخدم على هذا الجوال
+  const start = new URLSearchParams(location.search).get("p") || SBS.recall();
+  if (start) lookup(start, false);
 </script>
 </body>
 </html>

@@ -55,6 +55,8 @@ button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(-
 @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.step.just svg{animation:none}}
 .status{font-family:var(--f-display);font-size:17px;color:var(--gold-hi);text-align:center}
+.result{display:flex;flex-direction:column;gap:16px;scroll-margin-block:16px}
+.none{display:flex;flex-direction:column;gap:8px;scroll-margin-block:16px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stats div{background:var(--panel-2);border-radius:12px;padding:12px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .stats b{font-family:var(--f-display);font-size:28px;color:var(--gold);line-height:1.2}

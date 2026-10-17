@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Quicksand:wght@500;700&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -43,7 +43,7 @@
       <form id="f-find">
         <label for="q">رقم جوال العميل</label>
         <div class="row">
-          <input id="q" inputmode="numeric" placeholder="05xxxxxxxx">
+          <input id="q" inputmode="numeric" placeholder="05xxxxxxxx" enterkeyhint="search">
           <button class="btn ghost" type="submit">بحث</button>
         </div>
         <p id="q-err" class="err" hidden>الرقم لازم يبدأ بـ 05 ويكون عشرة أرقام.</p>
@@ -65,6 +65,7 @@
           <button class="btn" id="yes">نعم، اصرف</button>
           <button class="btn ghost" id="no">إلغاء</button>
         </div>
+        <a class="link center" id="cust-link" href="index.html">افتح بطاقة العميل كما يشوفها</a>
       </div>
     </section>
 
@@ -85,7 +86,7 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=2"></script>
 <script>
   const $ = id => document.getElementById(id);
   const PIN = "1234";          // رمز العرض فقط. في النسخة الحقيقية الدخول يكون من السيرفر
@@ -100,12 +101,12 @@
     const ok = loggedIn();
     $("login").hidden = ok;
     $("app").hidden = !ok;
-    if (ok) { renderRecent(); renderToday(); $("q").focus(); }
+    if (ok) { renderRecent(); renderToday(); }
   }
 
   $("f-pin").addEventListener("submit", e => {
     e.preventDefault();
-    if ($("pin").value === PIN) { setLogged(true); $("pin").value = ""; $("pin-err").hidden = true; gate(); }
+    if ($("pin").value === PIN) { setLogged(true); $("pin").value = ""; $("pin-err").hidden = true; gate(); $("q").focus(); }
     else { $("pin-err").hidden = false; }
   });
   $("logout").onclick = () => { setLogged(false); current = null; $("cust").hidden = true; $("new").hidden = true; gate(); };
@@ -126,6 +127,7 @@
     $("btn-add").hidden = ready;
     $("btn-redeem").hidden = !ready;
     $("confirm").hidden = true;
+    $("cust-link").href = "index.html?p=" + encodeURIComponent(p);
   }
 
   $("f-find").addEventListener("submit", e => {
@@ -135,6 +137,7 @@
     if (!p) { $("cust").hidden = true; $("new").hidden = true; return; }
     db = SBS.load();
     open(p);
+    SBS.reveal($("q"), $("cust").hidden ? $("new") : $("cust"));
   });
 
   function addStep() {
@@ -186,6 +189,17 @@
     $("cust").hidden = true; $("new").hidden = true; $("q").value = ""; $("reset-confirm").hidden = true;
     renderRecent(); renderToday(); SBS.toast("رجعت بيانات العرض للبداية");
   };
+
+  // تحدّث اللوحة إذا تغيّرت البيانات من تبويب ثاني أو رجعت للصفحة
+  function refresh() {
+    if (!loggedIn()) return;
+    db = SBS.load();
+    if (current) open(current);
+    renderRecent(); renderToday();
+  }
+  window.addEventListener("storage", refresh);
+  window.addEventListener("pageshow", e => { if (e.persisted) refresh(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 
   gate();
 </script>

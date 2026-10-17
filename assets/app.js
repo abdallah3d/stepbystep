@@ -27,12 +27,29 @@ const SBS = (() => {
     return db;
   }
   function save(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
-  function reset() { const db = seed(); save(db); return db; }
+  // آخر رقم استخدمه العميل على هذا الجوال، عشان تفتح بطاقته مباشرة
+  const PHONE_KEY = "sbs-my-phone";
+  function remember(p) { try { localStorage.setItem(PHONE_KEY, p); } catch (e) {} }
+  function recall() { try { return localStorage.getItem(PHONE_KEY); } catch (e) { return null; } }
+  function forget() { try { localStorage.removeItem(PHONE_KEY); } catch (e) {} }
+
+  function reset() { const db = seed(); save(db); forget(); return db; }
+
+  // يقفل كيبورد الجوال ويمرّر للنتيجة عشان ما تختفي تحته
+  function reveal(input, target) {
+    if (input) input.blur();
+    if (!target) return;
+    const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTimeout(() => target.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "nearest" }), 200);
+  }
 
   const ar = n => Number(n).toLocaleString("ar-SA");
 
   function norm(v) {
-    let d = String(v).replace(/[٠-٩]/g, c => "٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/\D/g, "");
+    let d = String(v)
+      .replace(/[٠-٩]/g, c => c.charCodeAt(0) - 0x660)   // أرقام عربية
+      .replace(/[۰-۹]/g, c => c.charCodeAt(0) - 0x6F0)   // أرقام فارسية من بعض الكيبوردات
+      .replace(/\D/g, "");
     if (d.startsWith("00966")) d = "0" + d.slice(5);
     else if (d.startsWith("966")) d = "0" + d.slice(3);
     else if (/^5\d{8}$/.test(d)) d = "0" + d;
@@ -71,5 +88,5 @@ const SBS = (() => {
     tt = setTimeout(() => t.classList.remove("show"), 2200);
   }
 
-  return { GOAL, load, save, reset, ar, norm, renderSteps, statusText, toast };
+  return { GOAL, load, save, reset, ar, norm, renderSteps, statusText, toast, remember, recall, reveal };
 })();

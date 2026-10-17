@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>الكاشير · Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Quicksand:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M70 22 L60 12 H32 L18 26 V40 L30 52 H58 L72 64 V76 L60 88 H30 L18 76"/></svg>
+    <div class="brand"><span class="en">step by step</span><span class="ar">لوحة الكاشير</span></div>
+  </header>
+
+  <!-- الدخول -->
+  <section id="login" class="card">
+    <div><h1>دخول الكاشير</h1><p class="sub">هذي الصفحة للموظفين فقط.</p></div>
+    <form id="f-pin">
+      <label for="pin">رمز الدخول</label>
+      <div class="row">
+        <input id="pin" type="password" inputmode="numeric" placeholder="••••" autocomplete="off">
+        <button class="btn" type="submit">دخول</button>
+      </div>
+      <p id="pin-err" class="err" hidden>الرمز غير صحيح.</p>
+    </form>
+    <p class="note">رمز العرض: 1234</p>
+  </section>
+
+  <!-- اللوحة -->
+  <div id="app" hidden style="display:flex;flex-direction:column;gap:18px">
+    <div class="topbar">
+      <span class="sub" id="today"></span>
+      <button class="link" id="logout">تسجيل خروج</button>
+    </div>
+
+    <section class="card">
+      <div><h1>تسجيل زيارة</h1><p class="sub">اكتب رقم العميل وأضف خطوة مع كل طلب.</p></div>
+      <form id="f-find">
+        <label for="q">رقم جوال العميل</label>
+        <div class="row">
+          <input id="q" inputmode="numeric" placeholder="05xxxxxxxx">
+          <button class="btn ghost" type="submit">بحث</button>
+        </div>
+        <p id="q-err" class="err" hidden>الرقم لازم يبدأ بـ 05 ويكون عشرة أرقام.</p>
+      </form>
+
+      <div id="new" class="panel" hidden>
+        <p>عميل جديد. أول خطوة تسجّله في البرنامج.</p>
+        <button class="btn big" id="btn-new">سجّل وأضف أول خطوة ✦</button>
+      </div>
+
+      <div id="cust" hidden style="display:flex;flex-direction:column;gap:14px">
+        <div class="who"><span class="phone" id="who"></span><span class="pill" id="pill"></span></div>
+        <div class="steps" id="steps"></div>
+        <p class="sub center" id="meta"></p>
+        <button class="btn big" id="btn-add">أضف خطوة ✦</button>
+        <button class="btn big ghost" id="btn-redeem" hidden>صرف الكوب المجاني</button>
+        <div class="confirm" id="confirm" hidden>
+          <p>تأكيد صرف الكوب المجاني وتصفير البطاقة؟</p>
+          <button class="btn" id="yes">نعم، اصرف</button>
+          <button class="btn ghost" id="no">إلغاء</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>آخر العملاء</h2>
+      <div class="list" id="recent"></div>
+    </section>
+
+    <div class="center"><button class="link" id="reset">إعادة بيانات العرض للبداية</button></div>
+    <div class="confirm" id="reset-confirm" hidden>
+      <p>تمسح كل التجارب وترجع العملاء الأمثلة؟</p>
+      <button class="btn" id="reset-yes">نعم، امسح</button>
+      <button class="btn ghost" id="reset-no">إلغاء</button>
+    </div>
+  </div>
+
+  <p class="note">نسخة عرض تجريبية · البيانات محفوظة على هذا الجهاز فقط</p>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/app.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const PIN = "1234";          // رمز العرض فقط. في النسخة الحقيقية الدخول يكون من السيرفر
+  const SESSION = "sbs-cashier";
+  const COOLDOWN = 30000;      // ٣٠ ثانية بين خطوتين لنفس العميل
+  let db = SBS.load(), current = null;
+
+  function loggedIn() { try { return sessionStorage.getItem(SESSION) === "1"; } catch (e) { return window._in === true; } }
+  function setLogged(v) { try { v ? sessionStorage.setItem(SESSION, "1") : sessionStorage.removeItem(SESSION); } catch (e) { window._in = v; } }
+
+  function gate() {
+    const ok = loggedIn();
+    $("login").hidden = ok;
+    $("app").hidden = !ok;
+    if (ok) { renderRecent(); renderToday(); $("q").focus(); }
+  }
+
+  $("f-pin").addEventListener("submit", e => {
+    e.preventDefault();
+    if ($("pin").value === PIN) { setLogged(true); $("pin").value = ""; $("pin-err").hidden = true; gate(); }
+    else { $("pin-err").hidden = false; }
+  });
+  $("logout").onclick = () => { setLogged(false); current = null; $("cust").hidden = true; $("new").hidden = true; gate(); };
+
+  function open(p, just) {
+    current = p;
+    const c = db.customers[p];
+    $("new").hidden = !!c;
+    $("cust").hidden = !c;
+    $("q").value = p;
+    if (!c) return;
+    const ready = c.steps >= SBS.GOAL;
+    $("who").textContent = p;
+    $("pill").textContent = ready ? "يستحق كوب مجاني" : `${SBS.ar(c.steps)} من ${SBS.ar(SBS.GOAL)}`;
+    $("pill").className = "pill" + (ready ? " ready" : "");
+    SBS.renderSteps($("steps"), c.steps, just);
+    $("meta").textContent = `زيارات: ${SBS.ar(c.total)} · أكواب مجانية مصروفة: ${SBS.ar(c.free)}`;
+    $("btn-add").hidden = ready;
+    $("btn-redeem").hidden = !ready;
+    $("confirm").hidden = true;
+  }
+
+  $("f-find").addEventListener("submit", e => {
+    e.preventDefault();
+    const p = SBS.norm($("q").value);
+    $("q-err").hidden = !!p;
+    if (!p) { $("cust").hidden = true; $("new").hidden = true; return; }
+    db = SBS.load();
+    open(p);
+  });
+
+  function addStep() {
+    db = SBS.load();
+    let c = db.customers[current];
+    if (!c) c = db.customers[current] = { steps: 0, total: 0, free: 0, updated: 0, lastStep: 0 };
+    if (c.steps >= SBS.GOAL) { SBS.toast("البطاقة مكتملة. اصرف الكوب المجاني أول."); return; }
+    if (c.lastStep && Date.now() - c.lastStep < COOLDOWN) { SBS.toast("انضافت خطوة قبل ثواني. إذا الطلب جديد انتظر شوي."); return; }
+    c.steps++; c.total++; c.updated = c.lastStep = Date.now();
+    db.log.push({ t: Date.now(), k: "step" });
+    SBS.save(db); open(current, c.steps); renderRecent(); renderToday();
+    SBS.toast(c.steps >= SBS.GOAL ? "اكتملت الخطوات! الطلب الجاي مجاني" : `تمت إضافة الخطوة ${SBS.ar(c.steps)}`);
+  }
+  $("btn-add").onclick = addStep;
+  $("btn-new").onclick = addStep;
+
+  $("btn-redeem").onclick = () => { $("confirm").hidden = false; $("btn-redeem").hidden = true; };
+  $("no").onclick = () => { $("confirm").hidden = true; $("btn-redeem").hidden = false; };
+  $("yes").onclick = () => {
+    db = SBS.load();
+    const c = db.customers[current];
+    if (!c || c.steps < SBS.GOAL) { open(current); return; }
+    c.steps = 0; c.free++; c.updated = Date.now();
+    db.log.push({ t: Date.now(), k: "redeem" });
+    SBS.save(db); open(current); renderRecent(); renderToday();
+    SBS.toast("تم صرف الكوب المجاني، وبدأت بطاقة جديدة");
+  };
+
+  function renderRecent() {
+    const rows = Object.entries(db.customers).sort((a, b) => b[1].updated - a[1].updated).slice(0, 8);
+    $("recent").innerHTML = rows.map(([p, c]) => {
+      let d = ""; for (let i = 1; i <= SBS.GOAL; i++) d += `<i class="${i <= c.steps ? "on" : ""}"></i>`;
+      return `<button class="item" data-p="${p}"><span class="phone">${p}</span><span class="dots" aria-label="${c.steps} من ${SBS.GOAL}">${d}</span></button>`;
+    }).join("") || `<p class="sub">ما فيه عملاء للحين.</p>`;
+    $("recent").querySelectorAll(".item").forEach(b => b.onclick = () => { db = SBS.load(); open(b.dataset.p); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  }
+
+  function renderToday() {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const today = db.log.filter(x => x.t >= start.getTime());
+    const s = today.filter(x => x.k === "step").length, r = today.length - s;
+    $("today").textContent = `اليوم: ${SBS.ar(s)} خطوة · ${SBS.ar(r)} كوب مجاني`;
+  }
+
+  $("reset").onclick = () => { $("reset-confirm").hidden = false; };
+  $("reset-no").onclick = () => { $("reset-confirm").hidden = true; };
+  $("reset-yes").onclick = () => {
+    db = SBS.reset(); current = null;
+    $("cust").hidden = true; $("new").hidden = true; $("q").value = ""; $("reset-confirm").hidden = true;
+    renderRecent(); renderToday(); SBS.toast("رجعت بيانات العرض للبداية");
+  };
+
+  gate();
+</script>
+</body>
+</html>

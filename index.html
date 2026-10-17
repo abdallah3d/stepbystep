@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>خطواتي · Step by Step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Quicksand:wght@500;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true"><path d="M70 22 L60 12 H32 L18 26 V40 L30 52 H58 L72 64 V76 L60 88 H30 L18 76"/></svg>
+    <div class="brand"><span class="en">step by step</span><span class="ar">برنامج الخطوات</span></div>
+  </header>
+
+  <section class="card">
+    <div>
+      <h1>خطواتك عندنا</h1>
+      <p class="sub">كل زيارة خطوة. خمس خطوات، والكوب السادس علينا.</p>
+    </div>
+    <form id="f">
+      <label for="phone">رقم جوالك</label>
+      <div class="row">
+        <input id="phone" inputmode="numeric" placeholder="05xxxxxxxx" autocomplete="tel">
+        <button class="btn" type="submit">اعرض بطاقتي</button>
+      </div>
+      <p id="err" class="err" hidden></p>
+    </form>
+
+    <p id="none" class="status" hidden>ما عندك خطوات للحين. قل رقمك للكاشير مع طلبك القادم.</p>
+
+    <div id="card" hidden style="display:flex;flex-direction:column;gap:16px">
+      <div class="steps" id="steps"></div>
+      <p class="status" id="status"></p>
+      <div class="stats">
+        <div><b id="free">٠</b><span>أكواب مجانية استلمتها</span></div>
+        <div><b id="total">٠</b><span>إجمالي زياراتك</span></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">نسخة عرض تجريبية · جرّب الرقم 0551234567</p>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  function show(raw) {
+    const p = SBS.norm(raw);
+    $("err").hidden = true; $("none").hidden = true; $("card").hidden = true;
+    if (!p) { $("err").textContent = "اكتب رقم جوالك كامل، يبدأ بـ 05 ومن عشرة أرقام."; $("err").hidden = false; return; }
+    const c = SBS.load().customers[p];
+    if (!c) { $("none").hidden = false; return; }
+    SBS.renderSteps($("steps"), c.steps);
+    $("status").textContent = SBS.statusText(c.steps);
+    $("free").textContent = SBS.ar(c.free);
+    $("total").textContent = SBS.ar(c.total);
+    $("card").hidden = false;
+  }
+  $("f").addEventListener("submit", e => { e.preventDefault(); show($("phone").value); });
+  // يحدّث البطاقة إذا الكاشير أضاف خطوة من تبويب ثاني على نفس الجهاز
+  window.addEventListener("storage", () => { if (!$("card").hidden || !$("none").hidden) show($("phone").value); });
+</script>
+</body>
+</html>
